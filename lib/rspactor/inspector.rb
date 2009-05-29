@@ -2,7 +2,7 @@ module RSpactor
   # Maps the changed filenames to list of specs to run in the next go.
   # Assumes Rails-like directory structure
   class Inspector
-    EXTENSIONS = %w(rb erb builder haml rhtml rxml yml conf opts)
+    EXTENSIONS = %w(rb erb builder haml rhtml rxml yml conf opts js html)
 
     def initialize(dir)
       @root = dir
@@ -60,6 +60,10 @@ module RSpactor
           candidates << 'models'
         when %r:^(spec/(spec_helper|shared/.*)|config/(boot|environment(s/test)?))\.rb$:, 'spec/spec.opts'
           candidates << 'spec'
+        when %r:^spec/javascripts/fixtures/:
+          candidates << spec_file.sub('fixtures/', '')
+        when %r:^public/javascripts/:
+          candidates << spec_file.sub('public/', '')
         else
           candidates << spec_file
         end
@@ -77,13 +81,17 @@ module RSpactor
     def append_spec_file_extension(file)
       if File.extname(file) == ".rb"
         file.sub(/.rb$/, "_spec.rb")
+      elsif File.extname(file) == ".js"
+        file.sub(/.js$/, "_spec.js")
+      elsif File.extname(file) == ".html" && file =~ %r:^spec/javascripts/fixtures/:
+        file.sub(/.html$/, "_spec.js")
       else
         file + "_spec.rb"
       end
     end
 
     def spec_file?(file)
-      file =~ /^spec\/.+_spec.rb$/
+      file =~ /^spec\/.+_spec.rb$/ || file =~ /^(test|spec|examples)\/.+_spec.js$/
     end
   end
 end

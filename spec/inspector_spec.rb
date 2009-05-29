@@ -20,6 +20,16 @@ describe RSpactor::Inspector do
         ['/project/spec/controllers/foo_controller_spec.rb']
     end
     
+    it "should translate files under 'public/' directory" do
+      translate('/project/public/javascripts/foo.js').should ==
+        ['/project/spec/javascripts/foo_spec.js']
+    end
+    
+    it "should consider js spec when js fixture changes" do
+      translate('/project/spec/javascripts/fixtures/foo.html').should ==
+        ['/project/spec/javascripts/foo_spec.js']
+    end
+    
     it "should translate templates" do
       translate('/project/app/views/foo/bar.erb').should == ['/project/spec/views/foo/bar.erb_spec.rb']
       translate('/project/app/views/foo/bar.html.haml').should ==
@@ -80,6 +90,17 @@ describe RSpactor::Inspector do
       translate('config/environment.rb').should == ['/project/spec']
       translate('config/environments/test.rb').should == ['/project/spec']
       translate('config/boot.rb').should == ['/project/spec']
+    end
+  end
+  
+  describe "#spec_file?" do
+    it "should recognize js specs" do
+      @inspector.spec_file?("spec/javascript/foo_spec.js").should be_true
+    end
+
+    it "should recognize js specs in alternate locations" do
+      @inspector.spec_file?("test/javascript/foo_spec.js").should be_true
+      @inspector.spec_file?("examples/javascript/foo_spec.js").should be_true
     end
   end
   

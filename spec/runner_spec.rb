@@ -211,6 +211,49 @@ describe RSpactor::Runner do
       run([])
       @runner.last_run_failed?.should be_false
     end
+    
+    describe "with javascripts" do
+      described_class.class_eval do
+        attr_accessor :cmds
+        def run_command(cmd)
+          # never shell out in tests, but remember every command we try to run
+          @cmds ||= []
+          @cmds << cmd
+          cmd
+        end
+      end
+
+      before(:each) do
+        run(%w(foo_spec.rb bar_spec.rb /full/path/to/javascripts/foo_spec.js /full/path/to/javascripts/bar_spec.js))
+        @specs = []
+        @rakes = []
+        @runner.cmds.each do |cmd|
+          (cmd =~ /^rake/ ? @rakes : @specs) << cmd
+        end
+      end
+      
+      it "should run spec once for all of the ruby specs" do
+        @specs.should have(1).item
+      end
+      
+      it "should run rake once for each javascript specs" do
+        @rakes.should have(2).item
+      end
+
+      it "should exclude javascript specs from regular spec command" do
+        @specs.each{|cmd| cmd.should_not include('foo_spec.js')}
+      end
+
+      it "should include javascript specs in rake commands" do
+        @rakes.grep(/TEST=foo/).should have(1).item
+        @rakes.grep(/TEST=bar/).should have(1).item
+      end
+
+      it "should translate javascript file names into spec names" do
+        @rakes.grep(%r{TEST=/full/path/to/javascripts/foo_spec.js}).should have(0).item
+        @rakes.grep(/\bTEST=foo\b/).should have(1).item
+      end
+    end
   end
   
   describe "#spec_changed_files" do

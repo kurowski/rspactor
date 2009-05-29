@@ -50,6 +50,19 @@ module RSpactor
 
     def run_all_specs
       run_spec_command(File.join(dir, 'spec'))
+      run_all_js_specs if has_js_specs?
+    end
+
+    def run_all_js_specs
+      javascript_failed = run_command "rake test:javascripts"
+      @last_run_failed ||= javascript_failed
+    end
+    
+    def has_js_specs?
+      @has_js_specs ||=
+        File.exist?('test/javascripts') ||
+        File.exist?('spec/javascripts') ||
+        File.exist?('examples/javascripts')
     end
 
     def run_spec_command(paths)
@@ -57,8 +70,16 @@ module RSpactor
       if paths.empty?
         @last_run_failed = nil
       else
-        cmd = [ruby_opts, spec_runner, paths, spec_opts].flatten.join(' ')
+        rb_paths, js_paths = [], []
+        paths.each {|path| (path =~ /_spec.js$/ ? js_paths : rb_paths) << path}
+        cmd = [ruby_opts, spec_runner, rb_paths, spec_opts].flatten.join(' ')
         @last_run_failed = run_command(cmd)
+        js_paths.each do |js_path|
+          js_path =~ %r{.*/javascripts/(.*)_spec.js$}
+          this_run_failed = run_command("rake test:javascripts TEST=#{$1}")
+          @last_run_failed ||= this_run_failed
+        end
+        @last_run_failed
       end
     end
     
